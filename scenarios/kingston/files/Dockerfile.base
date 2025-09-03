@@ -1,0 +1,47 @@
+# Base Dockerfile - Intentionally inefficient for demonstration
+# This Dockerfile demonstrates poor Docker practices but works offline
+
+# Using a larger base image than needed
+FROM python:3.9
+
+# Poor layer optimization - many separate operations
+RUN mkdir -p /tmp/layer1
+RUN mkdir -p /tmp/layer2  
+RUN mkdir -p /tmp/layer3
+RUN mkdir -p /tmp/layer4
+RUN mkdir -p /tmp/layer5
+
+# Setting work directory late in the process
+WORKDIR /app
+
+# Poor caching - copying everything at once early
+COPY . /app/
+
+# Creating directories in multiple layers (inefficient)
+RUN mkdir -p /app/data
+RUN mkdir -p /app/logs 
+RUN mkdir -p /app/temp
+RUN mkdir -p /app/cache
+
+# Setting permissions in multiple layers
+RUN chmod 755 /app/data
+RUN chmod 755 /app/logs
+RUN chmod 755 /app/temp
+RUN chmod 755 /app/cache
+
+# Adding unnecessary operations to simulate build time
+RUN echo "Building layer 1..." && sleep 1
+RUN echo "Building layer 2..." && sleep 1  
+RUN echo "Building layer 3..." && sleep 1
+RUN echo "Building layer 4..." && sleep 1
+RUN echo "Building layer 5..." && sleep 1
+
+# Adding unnecessary large files to demonstrate context issues
+RUN dd if=/dev/zero of=/app/dummy1.dat bs=1M count=5
+RUN dd if=/dev/zero of=/app/dummy2.dat bs=1M count=5
+RUN dd if=/dev/zero of=/app/dummy3.dat bs=1M count=5
+
+EXPOSE 8080
+
+# Poor CMD format (not using exec form)
+CMD ["sh", "-c", "python3 simple_app/app.py"]

@@ -1,0 +1,44 @@
+# Ignore git files
+.git
+.gitignore
+
+# Ignore log files and temporary files
+rails_app/log/*
+rails_app/tmp/*
+!rails_app/tmp/.keep
+!rails_app/log/.keep
+
+# Ignore bundler config
+rails_app/.bundle
+
+# Ignore database files
+rails_app/db/*.sqlite3*
+
+# Ignore node modules
+rails_app/node_modules/
+
+# Ignore assets that will be recompiled
+rails_app/public/assets
+
+# Ignore documentation
+*.md
+README*
+
+# Ignore development files
+.env*
+.ruby-version
+
+# Ignore test files
+rails_app/test/
+rails_app/spec/
+
+# Ignore editor files
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# Ignore OS files
+.DS_Store
+Thumbs.db

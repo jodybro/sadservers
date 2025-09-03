@@ -1,0 +1,38 @@
+# Optimized Dockerfile - Demonstrates best practices
+# This Dockerfile shows proper optimization techniques
+
+# Multi-stage build for better optimization
+FROM python:3.9-slim AS base
+
+# Set working directory early
+WORKDIR /app
+
+# Copy only requirements first for better dependency caching
+COPY simple_app/requirements.txt* ./
+
+# Install dependencies if requirements exist (in one layer)
+RUN if [ -f requirements.txt ]; then pip install --no-cache-dir -r requirements.txt; fi
+
+# Production stage - use minimal base
+FROM python:3.9-slim AS production
+
+# Create a non-root user for security
+RUN groupadd -r appuser && useradd -r -g appuser appuser
+
+WORKDIR /app
+
+# Copy only the application files needed (excluding unnecessary files via .dockerignore)
+COPY simple_app/ ./
+
+# Create necessary directories in a single layer with proper permissions
+RUN mkdir -p data logs temp cache && \
+    chown -R appuser:appuser /app && \
+    chmod -R 755 data logs temp cache
+
+# Switch to non-root user
+USER appuser
+
+EXPOSE 8080
+
+# Use exec form CMD for proper signal handling
+CMD ["python3", "app.py"]
