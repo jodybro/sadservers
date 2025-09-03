@@ -1,0 +1,63 @@
+# Base Dockerfile - Intentionally inefficient for demonstration
+# This Dockerfile has several inefficiencies that should be optimized
+
+# Using a large base image instead of a minimal one
+FROM ubuntu:20.04
+
+# Installing everything in one layer but inefficiently
+RUN apt-get update
+RUN apt-get install -y curl
+RUN apt-get install -y wget
+RUN apt-get install -y git
+RUN apt-get install -y build-essential
+RUN apt-get install -y libssl-dev
+RUN apt-get install -y libreadline-dev
+RUN apt-get install -y zlib1g-dev
+RUN apt-get install -y autoconf
+RUN apt-get install -y bison
+RUN apt-get install -y build-essential
+RUN apt-get install -y libssl-dev
+RUN apt-get install -y libyaml-dev
+RUN apt-get install -y libreadline6-dev
+RUN apt-get install -y zlib1g-dev
+RUN apt-get install -y libncurses5-dev
+RUN apt-get install -y libffi-dev
+RUN apt-get install -y libgdbm6
+RUN apt-get install -y libgdbm-dev
+RUN apt-get install -y libdb-dev
+RUN apt-get install -y nodejs
+RUN apt-get install -y npm
+RUN apt-get install -y sqlite3
+RUN apt-get install -y libsqlite3-dev
+
+# Set working directory late in the process
+WORKDIR /app
+
+# Copy everything at once (poor caching)
+COPY . .
+
+# Install Ruby manually (time consuming)
+RUN git clone https://github.com/rbenv/rbenv.git ~/.rbenv
+RUN echo 'export PATH="$HOME/.rbenv/bin:$PATH"' >> ~/.bashrc
+RUN echo 'eval "$(rbenv init -)"' >> ~/.bashrc
+RUN git clone https://github.com/rbenv/ruby-build.git ~/.rbenv/plugins/ruby-build
+RUN ~/.rbenv/bin/rbenv install 3.1.0
+RUN ~/.rbenv/bin/rbenv global 3.1.0
+
+# Install gems without bundler optimization
+RUN ~/.rbenv/shims/gem install bundler
+RUN ~/.rbenv/shims/bundle install
+
+# Compile assets in production mode (no dev dependencies separation)
+RUN ~/.rbenv/shims/bundle exec rails assets:precompile
+
+# Expose port
+EXPOSE 3000
+
+# Create unnecessary directories
+RUN mkdir -p /app/tmp/cache
+RUN mkdir -p /app/tmp/pids
+RUN mkdir -p /app/log
+
+# Run with a simple command
+CMD ["sh", "-c", "~/.rbenv/shims/bundle exec rails server -b 0.0.0.0"]
