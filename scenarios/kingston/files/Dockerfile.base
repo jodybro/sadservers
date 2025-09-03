@@ -1,0 +1,59 @@
+FROM ubuntu:16.04
+ENV RUBY_VERSION=2.3.8
+ENV DEBIAN_FRONTEND=noninteractive
+
+RUN apt-get update && \
+    apt-get install -y curl zlib1g-dev build-essential libssl-dev libreadline-dev libyaml-dev libsqlite3-dev \
+    sqlite3 \
+    git \
+    libxml2-dev \
+    libxslt1-dev \
+    libcurl4-openssl-dev \
+    software-properties-common \
+    libffi-dev \
+    tzdata \
+    # These three are wkhtmltopdf dependencies
+    wget libfontconfig1 libxrender1 \
+    libmysqlclient-dev openssl && \
+    apt-get clean && \
+    rm -rf /var/lib/apt/lists/*
+
+RUN curl -sL https://deb.nodesource.com/setup_14.x | bash - \
+    && apt-get install -y nodejs
+
+RUN curl -O https://cache.ruby-lang.org/pub/ruby/2.3/ruby-2.3.8.tar.gz && \
+    tar -xzvf ruby-2.3.8.tar.gz && \
+    cd ruby-2.3.8 && \
+    ./configure --disable-install-doc && \
+    make && \
+    make install && \
+    cd / && \
+    rm -rf /tmp/ruby-2.3.8 ruby-2.3.8.tar.gz
+
+# This thing is used by wicked_pdf to generate pdfs from html
+RUN wget https://github.com/wkhtmltopdf/wkhtmltopdf/releases/download/0.12.3/wkhtmltox-0.12.3_linux-generic-amd64.tar.xz && \
+    tar vxf wkhtmltox-0.12.3_linux-generic-amd64.tar.xz && \
+    cp wkhtmltox/bin/wk* /usr/bin/
+
+COPY . /app
+
+WORKDIR /app
+
+COPY Gemfile Gemfile.lock ./
+
+# nokogiri needs to be installed separately or it will fail
+RUN gem install bundler -v 1.17.0 && \
+    gem install rake -v 13.0.6 --force && \
+    gem install nokogiri -v '1.9.1'
+
+RUN bundle install && \
+    bundle config --delete bin && \
+    rake rails:update:bin && \
+    bundle binstubs rails
+
+COPY . /app
+RUN chmod +x /app/entrypoint.sh /app/sidekiq_shutdown.rb
+
+RUN bundle exec rake RAILS_ENV=production assets:precompile
+
+CMD ["bundle","exec","rails","server","-p","8000"]

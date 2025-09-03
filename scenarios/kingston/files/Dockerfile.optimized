@@ -1,0 +1,94 @@
+# Multi-stage build to reduce final image size
+FROM ubuntu:20.04 AS builder
+ENV RUBY_VERSION=2.7.4
+ENV DEBIAN_FRONTEND=noninteractive
+
+# Combine RUN statements and use specific versions for better caching
+RUN apt-get update && \
+    apt-get install -y --no-install-recommends \
+    curl \
+    zlib1g-dev \
+    build-essential \
+    libssl-dev \
+    libreadline-dev \
+    libyaml-dev \
+    libsqlite3-dev \
+    sqlite3 \
+    git \
+    libxml2-dev \
+    libxslt1-dev \
+    libcurl4-openssl-dev \
+    software-properties-common \
+    libffi-dev \
+    tzdata \
+    wget \
+    libfontconfig1 \
+    libxrender1 \
+    libmysqlclient-dev \
+    openssl \
+    && curl -sL https://deb.nodesource.com/setup_16.x | bash - \
+    && apt-get install -y --no-install-recommends nodejs \
+    && apt-get clean \
+    && rm -rf /var/lib/apt/lists/*
+
+# Use Ruby from package manager instead of compiling from source
+RUN apt-get update && \
+    apt-get install -y --no-install-recommends ruby-full \
+    && apt-get clean \
+    && rm -rf /var/lib/apt/lists/*
+
+# Download and install wkhtmltopdf in single layer
+RUN wget -q https://github.com/wkhtmltopdf/wkhtmltopdf/releases/download/0.12.6/wkhtmltox_0.12.6-1.focal_amd64.deb \
+    && apt-get update \
+    && apt-get install -y --no-install-recommends ./wkhtmltox_0.12.6-1.focal_amd64.deb \
+    && rm wkhtmltox_0.12.6-1.focal_amd64.deb \
+    && apt-get clean \
+    && rm -rf /var/lib/apt/lists/*
+
+WORKDIR /app
+
+# Copy dependency files first for better layer caching
+COPY Gemfile Gemfile.lock ./
+
+# Install gems in single RUN statement
+RUN gem install bundler -v 2.3.0 \
+    && bundle config set --local deployment 'true' \
+    && bundle config set --local without 'development test' \
+    && bundle install --jobs=$(nproc) \
+    && bundle clean --force
+
+# Copy application code
+COPY . .
+
+# Set permissions and precompile assets in single layer
+RUN chmod +x /app/entrypoint.sh /app/sidekiq_shutdown.rb \
+    && bundle exec rake RAILS_ENV=production assets:precompile
+
+# Final runtime stage
+FROM ubuntu:20.04
+ENV DEBIAN_FRONTEND=noninteractive
+
+# Install only runtime dependencies
+RUN apt-get update && \
+    apt-get install -y --no-install-recommends \
+    ruby \
+    nodejs \
+    libsqlite3-0 \
+    libxml2 \
+    libxslt1.1 \
+    libcurl4 \
+    libmysqlclient21 \
+    libfontconfig1 \
+    libxrender1 \
+    && apt-get clean \
+    && rm -rf /var/lib/apt/lists/*
+
+WORKDIR /app
+
+# Copy from builder stage
+COPY --from=builder /usr/local/bin/wkhtmlto* /usr/local/bin/
+COPY --from=builder /app .
+
+EXPOSE 8000
+
+CMD ["bundle","exec","rails","server","-p","8000"]
