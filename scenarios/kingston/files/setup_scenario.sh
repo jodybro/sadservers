@@ -38,10 +38,8 @@ echo "✅ Cleanup completed"
 REQUIRED_FILES=(
     "Dockerfile.base"
     "Dockerfile.optimized" 
-    "rails_app/Gemfile"
-    "rails_app/config/application.rb"
-    "rails_app/config/routes.rb"
-    "rails_app/app/controllers/home_controller.rb"
+    "simple_app/app.py"
+    "simple_app/requirements.txt"
     "time_builds.sh"
     "check.sh"
 )
@@ -58,27 +56,31 @@ echo "✅ All required files are present"
 
 # Make scripts executable
 chmod +x time_builds.sh check.sh
-if [[ -f "rails_app/bin/rails" ]]; then
-    chmod +x rails_app/bin/rails
+if [[ -f "simple_app/app.py" ]]; then
+    chmod +x simple_app/app.py
+fi
+if [[ -f "simple_app/data.sh" ]]; then
+    chmod +x simple_app/data.sh
 fi
 
 echo "✅ Scripts made executable"
 
-# Create any missing directories in Rails app
-mkdir -p rails_app/tmp/cache
-mkdir -p rails_app/tmp/pids  
-mkdir -p rails_app/log
-mkdir -p rails_app/public/assets
+# Create any missing directories in simple app
+mkdir -p simple_app/data
+mkdir -p simple_app/logs
+mkdir -p simple_app/temp
+mkdir -p simple_app/cache
 
-echo "✅ Rails app directory structure verified"
+echo "✅ Simple app directory structure verified"
 
 # Test Docker build context
 echo "🔍 Testing Docker build context..."
-docker build -f Dockerfile.base -t test-context --dry-run . &>/dev/null || {
+timeout 30 docker build -f Dockerfile.base -t test-context --no-cache . &>/dev/null || {
     echo "❌ Docker build context test failed"
     echo "Please check Dockerfile.base and .dockerignore"
     exit 1
 }
+docker rmi test-context &>/dev/null || true
 
 echo "✅ Docker build context is valid"
 

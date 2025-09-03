@@ -1,0 +1,2 @@
+# Simple Python app - no external dependencies needed for this demo
+# This file exists to demonstrate Dockerfile optimization with dependency management

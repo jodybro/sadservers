@@ -1,71 +1,38 @@
 # Optimized Dockerfile - Demonstrates best practices
-# This Dockerfile uses multi-stage builds, better caching, and minimal base images
+# This Dockerfile shows proper optimization techniques
 
-# Use a specific, minimal Ruby base image
-FROM ruby:3.1.0-alpine AS base
-
-# Install only essential system dependencies in a single layer
-RUN apk add --no-cache \
-    build-base \
-    sqlite-dev \
-    nodejs \
-    npm \
-    git \
-    && rm -rf /var/cache/apk/*
+# Multi-stage build for better optimization
+FROM python:3.9-slim AS base
 
 # Set working directory early
 WORKDIR /app
 
-# Create app user for security
-RUN addgroup -g 1000 -S appuser && \
-    adduser -u 1000 -S appuser -G appuser
-USER appuser
+# Copy only requirements first for better dependency caching
+COPY simple_app/requirements.txt* ./
 
-# Copy gemfiles first for better caching
-COPY --chown=appuser:appuser rails_app/Gemfile rails_app/Gemfile.lock ./
+# Install dependencies if requirements exist (in one layer)
+RUN if [ -f requirements.txt ]; then pip install --no-cache-dir -r requirements.txt; fi
 
-# Install gems in a separate layer for better caching
-RUN bundle config --global frozen 1 && \
-    bundle install --without development test
+# Production stage - use minimal base
+FROM python:3.9-slim AS production
 
-# Build stage for assets (if needed)
-FROM base AS builder
-
-# Copy application code
-COPY --chown=appuser:appuser rails_app/ ./
-
-# Precompile assets if they exist
-RUN if [ -f "app/assets/config/manifest.js" ]; then \
-      bundle exec rails assets:precompile; \
-    fi
-
-# Production stage
-FROM ruby:3.1.0-alpine AS production
-
-# Install only runtime dependencies
-RUN apk add --no-cache \
-    sqlite \
-    nodejs \
-    && rm -rf /var/cache/apk/*
-
-# Create app user
-RUN addgroup -g 1000 -S appuser && \
-    adduser -u 1000 -S appuser -G appuser
+# Create a non-root user for security
+RUN groupadd -r appuser && useradd -r -g appuser appuser
 
 WORKDIR /app
 
-# Copy gems from base stage
-COPY --from=base --chown=appuser:appuser /usr/local/bundle /usr/local/bundle
+# Copy only the application files needed (excluding unnecessary files via .dockerignore)
+COPY simple_app/ ./
 
-# Copy application and assets from builder
-COPY --from=builder --chown=appuser:appuser /app ./
+# Create necessary directories in a single layer with proper permissions
+RUN mkdir -p data logs temp cache && \
+    chown -R appuser:appuser /app && \
+    chmod -R 755 data logs temp cache
 
+# Switch to non-root user
 USER appuser
 
-# Create necessary directories
-RUN mkdir -p tmp/cache tmp/pids log
+EXPOSE 8080
 
-EXPOSE 3000
-
-# Use exec form for better signal handling
-CMD ["bundle", "exec", "rails", "server", "-b", "0.0.0.0"]
+# Use exec form CMD for proper signal handling
+CMD ["python3", "app.py"]

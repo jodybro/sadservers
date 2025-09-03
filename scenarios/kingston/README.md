@@ -2,7 +2,7 @@
 
 ## Description
 
-You are tasked with optimizing the Docker build process for a Ruby on Rails application. The current Dockerfile has several inefficiencies including unnecessary layers, outdated base images, and suboptimal dependency management that result in slow build times.
+You are tasked with optimizing the Docker build process for a Python application. The current Dockerfile has several inefficiencies including unnecessary layers, poor caching, large base images, and suboptimal commands that result in slow build times.
 
 Your goal is to optimize the Dockerfile to achieve at least a 10% improvement in build time while maintaining the same functionality. The scenario includes both a base (inefficient) Dockerfile and your task is to create an optimized version that demonstrates best practices such as:
 
@@ -32,7 +32,7 @@ The check script will:
 
 ## Files Provided
 
-- `rails_app/` - A sample Rails application for testing
+- `simple_app/` - A sample Python application for testing
 - `Dockerfile.base` - The inefficient starting Dockerfile
 - `Dockerfile.optimized` - Template for your optimized version
 - `setup_scenario.sh` - Environment setup script
