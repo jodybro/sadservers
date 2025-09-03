@@ -1,34 +1,58 @@
-#!/usr/bin/bash
+#!/bin/bash
 
-BUILD_MOUNT_POINT="/tmp/ephemeral-build"
+# Check script for Docker Image Build Optimization scenario
+# Validates that the optimized Docker build achieves >= 10% improvement over base build
 
-# Check if the build mount point exists
-function check_build_mount_point {
-  if [ ! -d $BUILD_MOUNT_POINT ]; then
-    echo -b "NO"
+SCENARIO_DIR="/home/admin/docker-optimization"
+IMPROVEMENT_FILE="$SCENARIO_DIR/improvement.txt"
+BASE_TIME_FILE="$SCENARIO_DIR/base_time.txt"
+OPTIMIZED_TIME_FILE="$SCENARIO_DIR/optimized_time.txt"
+
+# Check if Docker is installed and running
+if ! command -v docker &> /dev/null; then
+    echo "NO"
     exit 1
-  fi
-}
+fi
 
-# Function to check if both example-build-artifact.txt and
-# secondary-artifact.txt exist in the build mount point
-# BOTH files need to exist concurrently
-function check_build_artifacts {
-  BUILD_FILES=(
-    "example-build-artifact.txt"
-    "secondary-artifact.txt"
-  )
-  for file in "${BUILD_FILES[@]}"; do
-    if [ ! -f "$BUILD_MOUNT_POINT/$file" ]; then
-      echo -b "NO"
-      exit 1
+if ! docker info &> /dev/null; then
+    echo "NO"
+    exit 1
+fi
+
+# Check if the scenario directory exists
+if [ ! -d "$SCENARIO_DIR" ]; then
+    echo "NO"
+    exit 1
+fi
+
+# Check if Dockerfiles exist
+if [ ! -f "$SCENARIO_DIR/Dockerfile.base" ] || [ ! -f "$SCENARIO_DIR/Dockerfile.optimized" ]; then
+    echo "NO"
+    exit 1
+fi
+
+# Check if build timing has been run
+if [ ! -f "$IMPROVEMENT_FILE" ] || [ ! -f "$BASE_TIME_FILE" ] || [ ! -f "$OPTIMIZED_TIME_FILE" ]; then
+    echo "NO"
+    exit 1
+fi
+
+# Read the improvement percentage
+if [ -f "$IMPROVEMENT_FILE" ]; then
+    improvement=$(cat "$IMPROVEMENT_FILE")
+    
+    # Extract integer part of improvement (before decimal point)
+    improvement_int=$(echo "$improvement" | cut -d'.' -f1)
+    
+    # Check if improvement is >= 10%
+    if [ "$improvement_int" -ge 10 ]; then
+        echo "OK"
+        exit 0
     else
-      echo -b "OK"
-      exit 0
+        echo "NO"
+        exit 1
     fi
-  done
-}
-
-# Check if one or both functions executed successfull
-check_build_mount_point
-check_build_artifacts
+else
+    echo "NO"
+    exit 1
+fi

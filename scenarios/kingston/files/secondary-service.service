@@ -1,9 +1,0 @@
-[Unit]
-Description=Secondary service Application
-After=network.target
-
-[Service]
-ExecStart=/home/admin/secondary-service.sh
-
-[Install]
-WantedBy=multi-user.target

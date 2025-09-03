@@ -1,37 +1,59 @@
 ---
 # ansible-playbook playbook-debian.yml -u admin --private-key=/path/to/private/key -i "$ip,"
-- name: copy files to remote server
+- name: Setup Docker Image Build Optimization scenario
   hosts: all
   tasks:
-  # OS
-  - name: update packages and install lsof
+  # OS packages and Docker installation
+  - name: Update packages and install prerequisites
     become: true
     package:
-      # This is weird in that it does not exist in the offical docs 
-      # but this module just passes params down to the underlying 
-      # package manager module where `update_cache` is normally a thing so
-      # it ends up working....
       update_cache: yes
       state: latest
       name:
-        - lsof
-        - util-linux # Ensure that fallocate is installed
+        - apt-transport-https
+        - ca-certificates
+        - curl
+        - gnupg
+        - lsb-release
+        - bc
 
-  - name: create log file
+  - name: Add Docker GPG key
     become: true
-    file:
-      path: /var/log/fallocate.log
-      state: touch
-      owner: admin
-      group: admin
+    apt_key:
+      url: https://download.docker.com/linux/debian/gpg
+      state: present
 
-  - name: cronjob
-    cron:
-      name: "reboot"
-      special_time: reboot
-      job: "/home/admin/badlog.py &"
-  
-  # check.sh
+  - name: Add Docker repository
+    become: true
+    apt_repository:
+      repo: "deb [arch=amd64] https://download.docker.com/linux/debian {{ ansible_distribution_release }} stable"
+      state: present
+
+  - name: Install Docker
+    become: true
+    package:
+      update_cache: yes
+      state: latest
+      name:
+        - docker-ce
+        - docker-ce-cli
+        - containerd.io
+
+  - name: Add admin user to docker group
+    become: true
+    user:
+      name: admin
+      groups: docker
+      append: yes
+
+  - name: Start and enable Docker service
+    become: true
+    systemd:
+      name: docker
+      state: started
+      enabled: yes
+
+  # Scenario files setup
   - name: Create /home/admin/agent directory
     ansible.builtin.file:
       path: /home/admin/agent
@@ -40,34 +62,37 @@
       mode: a+wx
       state: directory
 
-  - name: Copy kingston systemd files
-    become: true
+  - name: Copy Docker optimization scenario files
+    become: false
     copy:
-      src: {{ item.src }}
-      dest: {{ item.dest }}
+      src: "{{ item.src }}"
+      dest: "{{ item.dest }}"
+      mode: "{{ item.mode | default('0644') }}"
     with_items:
-      - { src: ../files/mock-build.service, dest: /etc/systemd/system/mock-build.service }
-      - { src: ../files/secondary-service.service, dest: /etc/systemd/system/secondary-service.service }
+      - { src: ../files/Dockerfile.base, dest: /home/admin/Dockerfile.base }
+      - { src: ../files/Dockerfile.optimized, dest: /home/admin/Dockerfile.optimized }
+      - { src: ../files/Gemfile, dest: /home/admin/Gemfile }
+      - { src: ../files/Gemfile.lock, dest: /home/admin/Gemfile.lock }
+      - { src: ../files/entrypoint.sh, dest: /home/admin/entrypoint.sh, mode: '0755' }
+      - { src: ../files/sidekiq_shutdown.rb, dest: /home/admin/sidekiq_shutdown.rb, mode: '0755' }
+      - { src: ../files/time_builds.sh, dest: /home/admin/time_builds.sh, mode: '0755' }
+      - { src: ../files/setup_scenario.sh, dest: /home/admin/setup_scenario.sh, mode: '0755' }
 
-  - name: Start mock build application
-    become: true
-    systemd:
-      name: mock-build
-      state: started
-
-  - name: Start secondary service
-    become: true
-    systemd:
-      name: secondary-service
-      state: started
-      enabled: yes
-
-  - name: copy check.sh
+  - name: Copy check.sh to agent directory
     copy:
       src: ../files/check.sh
       dest: /home/admin/agent/check.sh
+      mode: '0755'
 
-  - name: set check.sh
-    file:
-      path: /home/admin/agent/check.sh
-      mode: "+x"
+  - name: Run scenario setup script
+    become: false
+    shell: /home/admin/setup_scenario.sh
+    args:
+      creates: /home/admin/docker-optimization
+
+  - name: Copy timing script to scenario directory
+    become: false
+    copy:
+      src: ../files/time_builds.sh
+      dest: /home/admin/docker-optimization/time_builds.sh
+      mode: '0755'
