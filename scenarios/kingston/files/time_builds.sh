@@ -3,7 +3,9 @@
 # Docker Image Build Time Comparison Script
 # This script builds both the base and optimized Dockerfiles and compares build times
 
-SCENARIO_DIR="/home/admin/docker-optimization"
+# Default admin home directory (can be overridden)
+ADMIN_HOME="${ADMIN_HOME:-/home/admin}"
+SCENARIO_DIR="$ADMIN_HOME/docker-optimization"
 BASE_DOCKERFILE="$SCENARIO_DIR/Dockerfile.base"
 OPTIMIZED_DOCKERFILE="$SCENARIO_DIR/Dockerfile.optimized"
 APP_DIR="$SCENARIO_DIR/app"
@@ -30,8 +32,8 @@ build_and_time() {
     # Time the build
     start_time=$(date +%s)
     
-    # Build the image (capture both stdout and stderr)
-    if docker build -f "$dockerfile" -t "$image_name" "$APP_DIR" >/dev/null 2>&1; then
+    # Build the image (show build output)
+    if docker build -f "$dockerfile" -t "$image_name" "$APP_DIR"; then
         end_time=$(date +%s)
         build_time=$((end_time - start_time))
         echo "Build time: ${build_time} seconds"

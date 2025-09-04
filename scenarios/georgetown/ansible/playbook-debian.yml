@@ -2,6 +2,8 @@
 # ansible-playbook playbook-debian.yml -u admin --private-key=/path/to/private/key -i "$ip,"
 - name: copy files to remote server
   hosts: all
+  vars:
+    admin_home: "{{ ansible_env.HOME | default('/home/admin') }}"
   tasks:
   # OS
   - name: update packages and install lsof
@@ -29,12 +31,12 @@
     cron:
       name: "reboot"
       special_time: reboot
-      job: "/home/admin/badlog.py &"
+      job: "{{ admin_home }}/badlog.py &"
   
   # check.sh
-  - name: Create /home/admin/agent directory
+  - name: Create {{ admin_home }}/agent directory
     ansible.builtin.file:
-      path: /home/admin/agent
+      path: "{{ admin_home }}/agent"
       owner: admin
       group: admin
       mode: a+wx
@@ -43,8 +45,8 @@
   - name: Copy georgetown systemd files
     become: true
     copy:
-      src: {{ item.src }}
-      dest: {{ item.dest }}
+      src: "{{ item.src }}"
+      dest: "{{ item.dest }}"
     with_items:
       - { src: ../files/mock-build.service, dest: /etc/systemd/system/mock-build.service }
       - { src: ../files/secondary-service.service, dest: /etc/systemd/system/secondary-service.service }
@@ -65,9 +67,9 @@
   - name: copy check.sh
     copy:
       src: ../files/check.sh
-      dest: /home/admin/agent/check.sh
+      dest: "{{ admin_home }}/agent/check.sh"
 
   - name: set check.sh
     file:
-      path: /home/admin/agent/check.sh
+      path: "{{ admin_home }}/agent/check.sh"
       mode: "+x"

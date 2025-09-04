@@ -3,7 +3,9 @@
 # Setup script for Docker optimization scenario
 # Creates the scenario environment and copies necessary files
 
-SCENARIO_DIR="/home/admin/docker-optimization"
+# Default admin home directory (can be overridden)
+ADMIN_HOME="${ADMIN_HOME:-/home/admin}"
+SCENARIO_DIR="$ADMIN_HOME/docker-optimization"
 
 echo "Setting up Docker Image Build Optimization scenario..."
 
@@ -11,8 +13,8 @@ echo "Setting up Docker Image Build Optimization scenario..."
 mkdir -p "$SCENARIO_DIR/app"
 
 # Copy Dockerfiles
-cp /home/admin/Dockerfile.base "$SCENARIO_DIR/"
-cp /home/admin/Dockerfile.optimized "$SCENARIO_DIR/"
+cp $ADMIN_HOME/Dockerfile.base "$SCENARIO_DIR/"
+cp $ADMIN_HOME/Dockerfile.optimized "$SCENARIO_DIR/"
 
 # Create basic Rails app structure for Docker builds
 mkdir -p "$SCENARIO_DIR/app/tmp/pids"
@@ -20,10 +22,10 @@ mkdir -p "$SCENARIO_DIR/app/config"
 mkdir -p "$SCENARIO_DIR/app/app/assets"
 
 # Copy application files
-cp /home/admin/Gemfile "$SCENARIO_DIR/app/"
-cp /home/admin/Gemfile.lock "$SCENARIO_DIR/app/"
-cp /home/admin/entrypoint.sh "$SCENARIO_DIR/app/"
-cp /home/admin/sidekiq_shutdown.rb "$SCENARIO_DIR/app/"
+cp $ADMIN_HOME/Gemfile "$SCENARIO_DIR/app/"
+cp $ADMIN_HOME/Gemfile.lock "$SCENARIO_DIR/app/"
+cp $ADMIN_HOME/entrypoint.sh "$SCENARIO_DIR/app/"
+cp $ADMIN_HOME/sidekiq_shutdown.rb "$SCENARIO_DIR/app/"
 
 # Create minimal Rails configuration files
 cat > "$SCENARIO_DIR/app/config/application.rb" << 'EOF'
