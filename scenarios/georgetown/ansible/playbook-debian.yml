@@ -44,12 +44,22 @@
 
   - name: Copy georgetown systemd files
     become: true
-    copy:
+    template:
       src: "{{ item.src }}"
       dest: "{{ item.dest }}"
     with_items:
       - { src: ../files/mock-build.service, dest: /etc/systemd/system/mock-build.service }
       - { src: ../files/secondary-service.service, dest: /etc/systemd/system/secondary-service.service }
+
+  - name: Copy georgetown script files
+    become: false
+    copy:
+      src: "{{ item.src }}"
+      dest: "{{ item.dest }}"
+      mode: "{{ item.mode | default('0644') }}"
+    with_items:
+      - { src: ../files/secondary-service.sh, dest: "{{ admin_home }}/secondary-service.sh", mode: '0755' }
+      - { src: ../files/mock-build-run.sh, dest: "{{ admin_home }}/mock_build.sh", mode: '0755' }
 
   - name: Start mock build application
     become: true

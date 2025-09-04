@@ -3,7 +3,7 @@ Description=Secondary service Application
 After=network.target
 
 [Service]
-ExecStart=/home/admin/secondary-service.sh
+ExecStart={{ admin_home }}/secondary-service.sh
 
 [Install]
 WantedBy=multi-user.target
