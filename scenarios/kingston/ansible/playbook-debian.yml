@@ -2,6 +2,8 @@
 # ansible-playbook playbook-debian.yml -u admin --private-key=/path/to/private/key -i "$ip,"
 - name: Setup Docker Image Build Optimization scenario
   hosts: all
+  vars:
+    admin_home: "{{ ansible_env.HOME | default('/home/admin') }}"
   tasks:
   # OS packages and Docker installation
   - name: Update packages and install prerequisites
@@ -54,9 +56,9 @@
       enabled: yes
 
   # Scenario files setup
-  - name: Create /home/admin/agent directory
+  - name: Create {{ admin_home }}/agent directory
     ansible.builtin.file:
-      path: /home/admin/agent
+      path: "{{ admin_home }}/agent"
       owner: admin
       group: admin
       mode: a+wx
@@ -69,30 +71,32 @@
       dest: "{{ item.dest }}"
       mode: "{{ item.mode | default('0644') }}"
     with_items:
-      - { src: ../files/Dockerfile.base, dest: /home/admin/Dockerfile.base }
-      - { src: ../files/Dockerfile.optimized, dest: /home/admin/Dockerfile.optimized }
-      - { src: ../files/Gemfile, dest: /home/admin/Gemfile }
-      - { src: ../files/Gemfile.lock, dest: /home/admin/Gemfile.lock }
-      - { src: ../files/entrypoint.sh, dest: /home/admin/entrypoint.sh, mode: '0755' }
-      - { src: ../files/sidekiq_shutdown.rb, dest: /home/admin/sidekiq_shutdown.rb, mode: '0755' }
-      - { src: ../files/time_builds.sh, dest: /home/admin/time_builds.sh, mode: '0755' }
-      - { src: ../files/setup_scenario.sh, dest: /home/admin/setup_scenario.sh, mode: '0755' }
+      - { src: ../files/Dockerfile.base, dest: "{{ admin_home }}/Dockerfile.base" }
+      - { src: ../files/Dockerfile.optimized, dest: "{{ admin_home }}/Dockerfile.optimized" }
+      - { src: ../files/Gemfile, dest: "{{ admin_home }}/Gemfile" }
+      - { src: ../files/Gemfile.lock, dest: "{{ admin_home }}/Gemfile.lock" }
+      - { src: ../files/entrypoint.sh, dest: "{{ admin_home }}/entrypoint.sh", mode: '0755' }
+      - { src: ../files/sidekiq_shutdown.rb, dest: "{{ admin_home }}/sidekiq_shutdown.rb", mode: '0755' }
+      - { src: ../files/time_builds.sh, dest: "{{ admin_home }}/time_builds.sh", mode: '0755' }
+      - { src: ../files/setup_scenario.sh, dest: "{{ admin_home }}/setup_scenario.sh", mode: '0755' }
 
   - name: Copy check.sh to agent directory
     copy:
       src: ../files/check.sh
-      dest: /home/admin/agent/check.sh
+      dest: "{{ admin_home }}/agent/check.sh"
       mode: '0755'
 
   - name: Run scenario setup script
     become: false
-    shell: /home/admin/setup_scenario.sh
+    shell: "{{ admin_home }}/setup_scenario.sh"
     args:
-      creates: /home/admin/docker-optimization
+      creates: "{{ admin_home }}/docker-optimization"
+    environment:
+      ADMIN_HOME: "{{ admin_home }}"
 
   - name: Copy timing script to scenario directory
     become: false
     copy:
       src: ../files/time_builds.sh
-      dest: /home/admin/docker-optimization/time_builds.sh
+      dest: "{{ admin_home }}/docker-optimization/time_builds.sh"
       mode: '0755'

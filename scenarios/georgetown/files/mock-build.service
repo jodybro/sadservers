@@ -3,7 +3,7 @@ Description=Mock Build Application
 After=network.target
 
 [Service]
-ExecStart=/home/admin/mock_build.sh
+ExecStart={{ admin_home }}/mock_build.sh
 
 [Install]
 WantedBy=multi-user.target

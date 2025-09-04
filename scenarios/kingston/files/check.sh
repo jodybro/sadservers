@@ -3,7 +3,9 @@
 # Check script for Docker Image Build Optimization scenario
 # Validates that the optimized Docker build achieves >= 10% improvement over base build
 
-SCENARIO_DIR="/home/admin/docker-optimization"
+# Default admin home directory (can be overridden)
+ADMIN_HOME="${ADMIN_HOME:-/home/admin}"
+SCENARIO_DIR="$ADMIN_HOME/docker-optimization"
 IMPROVEMENT_FILE="$SCENARIO_DIR/improvement.txt"
 BASE_TIME_FILE="$SCENARIO_DIR/base_time.txt"
 OPTIMIZED_TIME_FILE="$SCENARIO_DIR/optimized_time.txt"
